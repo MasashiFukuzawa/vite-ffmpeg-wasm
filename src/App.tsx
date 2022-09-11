@@ -1,9 +1,42 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import './App.css'
+import { createFFmpeg, fetchFile } from "@ffmpeg/ffmpeg";
+import { useState } from "react";
+import "./App.css";
+import reactLogo from "./assets/react.svg";
+
+const INPUT_MP4_FILE = "input.mp4";
+const OUTPUT_MP4_FILE = "output.mp4";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [videoSrc, setVideoSrc] = useState("");
+
+  const ffmpeg = createFFmpeg({
+    log: true,
+  });
+
+  const trimRecording = async () => {
+    await ffmpeg.load();
+    ffmpeg.FS(
+      "writeFile",
+      INPUT_MP4_FILE,
+      await fetchFile(`/${INPUT_MP4_FILE}`)
+    );
+    const args = [
+      "-i",
+      INPUT_MP4_FILE,
+      "-ss",
+      "30",
+      "-to",
+      "40",
+      "-c",
+      "copy",
+      OUTPUT_MP4_FILE,
+    ];
+    await ffmpeg.run(...args);
+    const data = ffmpeg.FS("readFile", OUTPUT_MP4_FILE);
+    setVideoSrc(
+      URL.createObjectURL(new Blob([data.buffer], { type: "video/mp4" }))
+    );
+  };
 
   return (
     <div className="App">
@@ -17,9 +50,11 @@ function App() {
       </div>
       <h1>Vite + React</h1>
       <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
+        <div>
+          <video src={INPUT_MP4_FILE} controls></video>
+        </div>
+        <div>{videoSrc && <video src={videoSrc} controls></video>}</div>
+        <button onClick={trimRecording}>Trim a recording</button>
         <p>
           Edit <code>src/App.tsx</code> and save to test HMR
         </p>
@@ -28,7 +63,7 @@ function App() {
         Click on the Vite and React logos to learn more
       </p>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
